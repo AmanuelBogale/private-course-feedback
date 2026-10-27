@@ -1,0 +1,55 @@
+pragma language_version 0.23;
+
+import CompactStandardLibrary;
+
+export sealed ledger organizer: Bytes<32>;
+export ledger enrolled: HistoricMerkleTree<10, Bytes<32>>;
+export ledger usedNullifiers: Set<Bytes<32>>;
+export ledger oneStar: Counter;
+export ledger twoStar: Counter;
+export ledger threeStar: Counter;
+export ledger fourStar: Counter;
+export ledger fiveStar: Counter;
+
+witness secretKey(): Bytes<32>;
+witness findEnrolledPath(pk: Bytes<32>): MerkleTreePath<10, Bytes<32>>;
+
+export circuit derivePublicKey(sk: Bytes<32>): Bytes<32> {
+  return persistentHash<Vector<2, Bytes<32>>>([pad(32, "feedback:member:"), sk]);
+}
+
+circuit reviewNullifier(sk: Bytes<32>): Bytes<32> {
+  return persistentHash<Vector<2, Bytes<32>>>([pad(32, "feedback:nullifier:"), sk]);
+}
+
+circuit organizerKey(sk: Bytes<32>): Bytes<32> {
+  return persistentHash<Vector<2, Bytes<32>>>([pad(32, "feedback:organizer:"), sk]);
+}
+
+constructor() {
+  organizer = disclose(organizerKey(secretKey()));
+}
+
+export circuit enroll(pk: Bytes<32>): [] {
+  assert(organizer == organizerKey(secretKey()), "Only the organizer can enroll");
+  enrolled.insert(disclose(pk));
+}
+
+export circuit submitReview(rating: Uint<8>): [] {
+  const sk = secretKey();
+  const path = findEnrolledPath(derivePublicKey(sk));
+  assert(path.leaf == derivePublicKey(sk), "Path is not for this student");
+  assert(enrolled.checkRoot(disclose(merkleTreePathRoot<10, Bytes<32>>(path))), "Not enrolled");
+
+  const nul = disclose(reviewNullifier(sk));
+  assert(!usedNullifiers.member(nul), "Already reviewed");
+  usedNullifiers.insert(nul);
+
+  assert(rating >= 1 && rating <= 5, "Rating must be 1 to 5");
+  const r = disclose(rating);
+  if (r == 1) { oneStar.increment(1); }
+  else if (r == 2) { twoStar.increment(1); }
+  else if (r == 3) { threeStar.increment(1); }
+  else if (r == 4) { fourStar.increment(1); }
+  else { fiveStar.increment(1); }
+}
