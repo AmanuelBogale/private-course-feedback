@@ -39,7 +39,7 @@ test/feedback.test.ts       simulator tests (8 tests, no network needed)
 Requirements: Node.js 22, the Compact compiler 0.31.1. On Windows, use WSL2 with Ubuntu.
 
 ```
-git clone https://github.com/<owner>/private-course-feedback.git
+git clone https://github.com/AmanuelBogale/private-course-feedback.git
 cd private-course-feedback
 npm install
 compact update 0.31.1
