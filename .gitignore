@@ -1,2 +1,4 @@
 node_modules/
 contract/managed/
+ui/dist/
+ui/public/managed/

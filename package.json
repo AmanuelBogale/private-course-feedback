@@ -6,7 +6,9 @@
   "license": "Apache-2.0",
   "scripts": {
     "compile": "compact compile contract/feedback.compact contract/managed/feedback",
-    "test": "vitest run"
+    "test": "vitest run",
+    "ui:dev": "npm run dev -w course-feedback-ui",
+    "ui:build": "npm run build -w course-feedback-ui"
   },
   "dependencies": {
     "@midnight-ntwrk/compact-runtime": "0.16.0"
@@ -14,5 +16,17 @@
   "devDependencies": {
     "typescript": "^5.7.0",
     "vitest": "^4.1.0"
+  },
+  "workspaces": [
+    "ui"
+  ],
+  "overrides": {
+    "@midnight-ntwrk/ledger-v8": "8.1.2",
+    "@midnight-ntwrk/onchain-runtime-v3": "3.1.1",
+    "@midnight-ntwrk/zkir-v2": "2.1.1",
+    "vite-plugin-top-level-await": {
+      "@swc/core": "1.15.47",
+      "uuid": "11.1.1"
+    }
   }
 }
