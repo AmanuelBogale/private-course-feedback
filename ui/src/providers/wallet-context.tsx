@@ -1,4 +1,5 @@
 import {
+  useRef,
   createContext,
   useCallback,
   useEffect,
@@ -129,7 +130,7 @@ export function WalletProvider({ children }: { children: ReactNode }) {
     return () => window.clearInterval(id);
   }, []);
 
-  const connect = useCallback(async () => {
+  const connectOnce = useCallback(async () => {
     setState((prev) => ({ ...prev, status: "connecting", error: null }));
 
     const found = detectWallets();
@@ -169,6 +170,19 @@ export function WalletProvider({ children }: { children: ReactNode }) {
       });
     }
   }, [requestedNetworkId, selectedWalletKey]);
+
+  // Lace opens an authorization pop-up for every connect() call, and a second
+  // call while one is pending (React StrictMode runs mount effects twice in
+  // dev) shuts down the first pop-up's channel. Share one in-flight attempt.
+  const inFlight = useRef<Promise<void> | null>(null);
+  const connect = useCallback((): Promise<void> => {
+    if (inFlight.current) return inFlight.current;
+    const attempt = connectOnce().finally(() => {
+      inFlight.current = null;
+    });
+    inFlight.current = attempt;
+    return attempt;
+  }, [connectOnce]);
 
   const disconnect = useCallback(() => {
     storage.remove(AUTOCONNECT_KEY);
