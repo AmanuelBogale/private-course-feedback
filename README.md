@@ -24,7 +24,7 @@ Course feedback is often not honest because students fear being identified. Anon
 | Student secret key, the student's Merkle path | Private state on the student's device (`contract/witnesses.ts`) | No |
 | Membership proof, rating range check, one-review check | Zero-knowledge circuit (`submitReview`) | Only that it passed |
 
-The contract uses `HistoricMerkleTree<10, Bytes<32>>` (up to 1,024 students per course), a `Set` of nullifiers, two domain-separated `persistentHash` derivations, and `disclose()` only where a value is meant to be public.
+The contract uses `HistoricMerkleTree<10, Bytes<32>>` (up to 1,024 students per course), a `Set` of nullifiers, domain-separated `persistentHash` derivations, and `disclose()` only where a value is meant to be public.
 
 ## Repository layout
 
@@ -32,22 +32,25 @@ The contract uses `HistoricMerkleTree<10, Bytes<32>>` (up to 1,024 students per 
 contract/feedback.compact   the Compact contract
 contract/witnesses.ts       private-state code that runs on the student's device
 test/feedback.test.ts       simulator tests (8 tests, no network needed)
+ui/                         browser app (Vite + React), connects to the Lace wallet
 ```
+
+The browser app is adapted from Midnight's own `hello-world` example UI (Apache-2.0).
 
 ## Setup and testing
 
-Requirements: Node.js 22, the Compact compiler 0.31.1. On Windows, use WSL2 with Ubuntu.
+Requirements: Node.js 22 and the Compact compiler 0.31.1. On Windows, use WSL2 with Ubuntu.
 
 ```
 git clone https://github.com/AmanuelBogale/private-course-feedback.git
 cd private-course-feedback
 npm install
 compact update 0.31.1
-compact compile contract/feedback.compact contract/managed/feedback
+npm run compile
 npm test
 ```
 
-Expected result: 8 passing tests. The tests check that:
+Expected result: 8 passing tests. They check that:
 - an enrolled student can review and the star counts add up
 - a second review from the same student is rejected
 - a student who was never enrolled is rejected
@@ -56,6 +59,25 @@ Expected result: 8 passing tests. The tests check that:
 - ratings outside 1 to 5 are rejected
 - the review does not put the student's enrolled key or secret on the ledger
 
+## Run the web app on Midnight Preprod
+
+You need the Lace wallet with a Midnight account on Preprod, funded with test tokens (tNIGHT from the faucet, then "Generate tDUST"), and Docker.
+
+1. Start the proof server and leave it running:
+   ```
+   docker run -d --name proof-server -p 6300:6300 midnightntwrk/proof-server:8.0.3 midnight-proof-server -v
+   ```
+2. In Lace, set the network to Testnet, Midnight Preprod, with the proof server set to Local (`http://localhost:6300`).
+3. Start the app:
+   ```
+   npm run ui:dev
+   ```
+4. Open `http://localhost:5173`, choose `preprod`, click Connect Wallet and approve in Lace.
+5. Set a passphrase. It encrypts the secret key kept in your browser. There is no recovery, so write it down.
+6. The organizer clicks Deploy, copies each student's public key into "Enroll", and shares the contract address. A student pastes the address into Join, copies their own public key to the organizer, and, once enrolled, submits a review.
+
+Tested with Chrome and the Lace extension. In one Edge setup the wallet connection failed with a wallet-side error, so Chrome is the recommended browser.
+
 ## Privacy limits (please read)
 
 - **Small groups give weak anonymity.** If only 3 students are enrolled, an observer can narrow things down.
@@ -63,13 +85,15 @@ Expected result: 8 passing tests. The tests check that:
 - **Transaction metadata is not hidden.** The wallet that pays the fee, and the timing, are visible. A student should submit from a fresh wallet if this matters.
 - **The organizer sees the public keys they enroll.** The organizer cannot tell which enrolled key later posted a review.
 - **A lost secret key cannot be recovered.** That student cannot review.
+- One deployed contract is one course, and reviews are star ratings only (no text) in this version.
 
 ## Progress in Wave 3
 
 - [x] Compact contract with enrollment, membership proof, nullifiers and star counters
 - [x] Witness code and 8 passing simulator tests
-- [ ] Browser frontend using the Midnight wallet
-- [ ] Deployment to Midnight Preprod
+- [x] Browser frontend that connects to Lace on Preprod
+- [ ] First deployment and end-to-end review on Midnight Preprod
+- [ ] Small pilot with real students, results, and lessons learned
 - [ ] Demo video and slide deck
 
 ## License
